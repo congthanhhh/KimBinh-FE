@@ -1,15 +1,21 @@
-import { Bell, Search, Settings, RefreshCcw } from "lucide-react"
+import { Bell, Menu, Search, Settings, RefreshCcw } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useDemoStore } from "@/store/demoStore"
 import { canPerform, demoRoles, roleLabels, type DemoRole } from "@/utils/permissions"
 
-export function Topbar() {
+type TopbarProps = {
+  onMenuClick?: () => void
+  isMobileMenuOpen?: boolean
+}
+
+export function Topbar({ onMenuClick, isMobileMenuOpen = false }: TopbarProps) {
   const selectedRole = useDemoStore((state) => state.selectedRole)
   const setSelectedRole = useDemoStore((state) => state.setSelectedRole)
   const resetDemoData = useDemoStore((state) => state.resetDemoData)
   const canResetDemoData = canPerform(selectedRole, "resetDemoData")
+  const menuLabel = isMobileMenuOpen ? "Đóng menu điều hướng" : "Mở menu điều hướng"
 
   function handleResetDemoData() {
     if (!canResetDemoData) return
@@ -20,7 +26,17 @@ export function Topbar() {
   return (
     <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur">
       <div className="flex min-h-14 flex-wrap items-center gap-2 px-3 py-2 sm:flex-nowrap sm:gap-3 sm:px-4 lg:px-6">
-        <div className="min-w-0 shrink-0 lg:hidden">
+        <div className="flex min-w-0 shrink-0 items-center gap-2 lg:hidden">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={onMenuClick}
+            aria-label={menuLabel}
+            aria-expanded={isMobileMenuOpen}
+            aria-controls="app-sidebar"
+          >
+            <Menu className="size-4" />
+          </Button>
           <div className="text-sm font-semibold">KBI-DASHBOARD</div>
         </div>
         <div className="relative order-last hidden w-full sm:order-none sm:ml-auto sm:block sm:max-w-[240px] md:max-w-sm">

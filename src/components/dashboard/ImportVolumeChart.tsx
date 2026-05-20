@@ -1,9 +1,14 @@
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis } from "recharts"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { importVolume } from "@/data/mock-data"
+import { useDemoStore } from "@/store/demoStore"
+import type { DeliveryOrder, PurchaseRequest } from "@/types"
 
 export function ImportVolumeChart() {
+  const purchaseRequests = useDemoStore((state) => state.purchaseRequests)
+  const deliveryOrders = useDemoStore((state) => state.deliveryOrders)
+  const importVolume = buildImportVolume(purchaseRequests, deliveryOrders)
+
   return (
     <Card className="min-h-[320px]">
       <CardHeader>
@@ -37,4 +42,28 @@ export function ImportVolumeChart() {
       </CardContent>
     </Card>
   )
+}
+
+function buildImportVolume(purchaseRequests: PurchaseRequest[], deliveryOrders: DeliveryOrder[]) {
+  const monthKeys = new Set<string>()
+
+  for (const request of purchaseRequests) {
+    monthKeys.add(request.requested_order_date.slice(0, 7))
+  }
+
+  if (monthKeys.size === 0) monthKeys.add(new Date().toISOString().slice(0, 7))
+
+  return [...monthKeys].sort().map((monthKey) => ({
+    month: formatMonthLabel(monthKey),
+    purchaseRequests: purchaseRequests.filter((request) => request.requested_order_date.startsWith(monthKey)).length,
+    deliveryOrders: deliveryOrders.filter((order) => {
+      const relatedRequest = purchaseRequests.find((request) => request.requested_order_id === order.order_info.request_code)
+      return relatedRequest?.requested_order_date.startsWith(monthKey) ?? false
+    }).length,
+  }))
+}
+
+function formatMonthLabel(monthKey: string) {
+  const month = Number(monthKey.slice(5, 7))
+  return Number.isNaN(month) ? monthKey : `T${month}`
 }

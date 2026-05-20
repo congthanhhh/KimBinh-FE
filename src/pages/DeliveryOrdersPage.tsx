@@ -4,7 +4,6 @@ import { Link } from "react-router-dom"
 import { HeaderTooltip } from "@/components/shared/HeaderTooltip"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { PaginationControls } from "@/components/shared/PaginationControls"
-import { PermissionActionButton } from "@/components/shared/PermissionActionButton"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { ActionsCell, CompositeCell, StatusCell } from "@/components/shared/TableCells"
 import { Badge } from "@/components/ui/badge"
@@ -21,6 +20,7 @@ import { actionUnavailableReason, canPerform, roleLabels } from "@/utils/permiss
 export function DeliveryOrdersPage() {
   const selectedRole = useDemoStore((state) => state.selectedRole)
   const deliveryOrders = useDemoStore((state) => state.deliveryOrders)
+  const purchaseOrderDetailsById = useDemoStore((state) => state.purchaseOrderDetailsById)
   const [query, setQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("ALL")
   const [delayFilter, setDelayFilter] = useState("ALL")
@@ -32,9 +32,19 @@ export function DeliveryOrdersPage() {
           order.order_info.request_code,
           order.order_info.tracking_number,
           order.sap_integration.po_number,
+          order.purchase_order_ids.map((id) => purchaseOrderDetailsById[id]?.supplier_name).join(" "),
+          order.purchase_order_ids.map((id) => purchaseOrderDetailsById[id]?.supplier_code).join(" "),
           order.sap_integration.supplier_code,
           order.product_details.item_name_requested,
           order.logistics_shipping.shipping_method,
+          order.logistics_shipping.incoterms,
+          order.logistics_shipping.vessel_name,
+          order.logistics_shipping.voyage_no,
+          order.logistics_shipping.booking_number,
+          order.logistics_shipping.mbl_number,
+          order.logistics_shipping.port_of_loading,
+          order.logistics_shipping.port_of_discharge,
+          order.order_info.xnk_notes,
           order.order_info.status,
         ]
           .join(" ")
@@ -49,7 +59,7 @@ export function DeliveryOrdersPage() {
           (delayFilter === "ALL" || (delayFilter === "DELAYED" ? isDelayed : !isDelayed))
         )
       }),
-    [deliveryOrders, delayFilter, query, statusFilter]
+    [deliveryOrders, delayFilter, purchaseOrderDetailsById, query, statusFilter]
   )
   const {
     page,
@@ -110,16 +120,12 @@ export function DeliveryOrdersPage() {
     <div className="space-y-4">
       <PageHeader
         title="Đơn nhập hàng"
-        description="DO, PO, SAP, vận chuyển, kho, tài chính và task được giữ đầy đủ. Tạo DO từ PR đã duyệt tại trang Yêu cầu mua hàng."
+        description="DO, PO, SAP, vận chuyển, kho, tài chính và task được giữ đầy đủ."
         action={
-          canCreateOrder ? (
-            <Button variant="default" size="default" render={<Link to="/purchase-requests" />}>
-              Tạo từ PR đã duyệt
+          canCreateOrder && (
+            <Button variant="default" size="default" nativeButton={false} render={<Link to="/delivery-orders/create" />}>
+              Tạo Delivery Order
             </Button>
-          ) : (
-            <PermissionActionButton allowed={false} variant="default" size="default" showDisabledReason>
-              Tạo từ PR đã duyệt
-            </PermissionActionButton>
           )
         }
       />
@@ -173,14 +179,14 @@ export function DeliveryOrdersPage() {
               <option value="ON_TIME">Đúng hạn</option>
             </select>
           </div>
-          <Table className="min-w-[1080px] table-fixed">
+          <Table className="min-w-[1360px] table-fixed">
             <TableHeader>
               <TableRow>
                 <TableHead className="w-40">
                   <HeaderTooltip label="Đơn hàng" subtitle="Mã DO / Tracking" tooltip="Order Number + Tracking Number" />
                 </TableHead>
                 <TableHead className="w-36">
-                  <HeaderTooltip label="PO / PR" subtitle="Số PO / Mã PR" tooltip="PO Number + Request Code" />
+                  <HeaderTooltip label="PO / PR" subtitle="Số PO / NCC / Mã PR" tooltip="PO Number + Supplier + Request Code" />
                 </TableHead>
                 <TableHead>
                   <HeaderTooltip label="Hàng hóa" subtitle="Tên hàng / Số lượng" tooltip="Item Name + Quantity" />
@@ -190,6 +196,9 @@ export function DeliveryOrdersPage() {
                 </TableHead>
                 <TableHead className="w-32">
                   <HeaderTooltip label="Thời gian" subtitle="ETD / ETA" tooltip="Estimated Time of Departure + Estimated Time of Arrival" />
+                </TableHead>
+                <TableHead className="w-36">
+                  <HeaderTooltip label="Kho / Thuế" subtitle="Nhập kho / Tax" tooltip="Warehouse planned/actual + Finance tax" />
                 </TableHead>
                 <TableHead className="w-32"><HeaderTooltip label="Trạng thái" subtitle="Tình trạng" tooltip="Status / order_info.status" /></TableHead>
                 <TableHead className="w-28"><HeaderTooltip label="Trễ" subtitle="Số ngày" tooltip="Delay Days / warehouse_tracking.delay_days" /></TableHead>
@@ -204,12 +213,16 @@ export function DeliveryOrdersPage() {
                     lines={[
                       { label: "DO", value: order.order_info.order_number, emphasis: true },
                       { label: "TRK", value: order.order_info.tracking_number },
+                      { label: "HĐ", value: order.order_info.purchase_contract_number },
+                      { label: "XNK", value: order.order_info.xnk_notes },
                     ]}
                   />
                   <CompositeCell
                     className="w-36"
                     lines={[
                       { label: "PO", value: order.sap_integration.po_number, emphasis: true },
+                      { label: "NCC", value: order.purchase_order_ids.map((id) => purchaseOrderDetailsById[id]?.supplier_name).filter(Boolean).join(", ") },
+                      { label: "Mã NCC", value: order.purchase_order_ids.map((id) => purchaseOrderDetailsById[id]?.supplier_code).filter(Boolean).join(", ") || order.sap_integration.supplier_code },
                       { label: "PR", value: order.order_info.request_code },
                     ]}
                   />
@@ -224,6 +237,12 @@ export function DeliveryOrdersPage() {
                     lines={[
                       { label: "PT", value: order.logistics_shipping.shipping_method, emphasis: true },
                       { label: "Hãng", value: order.logistics_shipping.shipping_line },
+                      { label: "Incoterms", value: order.logistics_shipping.incoterms },
+                      { label: "Tàu", value: order.logistics_shipping.vessel_name ?? order.logistics_shipping.vessel_code },
+                      { label: "Voyage", value: order.logistics_shipping.voyage_no },
+                      { label: "Booking", value: order.logistics_shipping.booking_number },
+                      { label: "MBL", value: order.logistics_shipping.mbl_number },
+                      { label: "Cảng", value: `${order.logistics_shipping.port_of_loading ?? order.logistics_shipping.port_of_departure} → ${order.logistics_shipping.port_of_discharge ?? order.logistics_shipping.port_of_destination}` },
                     ]}
                   />
                   <CompositeCell
@@ -231,6 +250,16 @@ export function DeliveryOrdersPage() {
                     lines={[
                       { label: "ETD", value: formatOptionalDate(order.logistics_shipping.etd_actual ?? order.logistics_shipping.etd_planned), emphasis: true },
                       { label: "ETA", value: formatOptionalDate(order.logistics_shipping.eta_actual ?? order.logistics_shipping.eta_planned) },
+                      { label: "ATD", value: formatOptionalDate(order.logistics_shipping.atd_actual) },
+                      { label: "ATA", value: formatOptionalDate(order.logistics_shipping.ata_actual) },
+                    ]}
+                  />
+                  <CompositeCell
+                    className="w-36"
+                    lines={[
+                      { label: "KH", value: formatOptionalDate(order.warehouse_tracking.planned_entry_date), emphasis: true },
+                      { label: "TT", value: formatOptionalDate(order.warehouse_tracking.actual_entry_date) },
+                      { label: "Thuế", value: `${order.finance_tax.tax_amount.toLocaleString()} ${order.finance_tax.currency_code}` },
                     ]}
                   />
                   <StatusCell><StatusBadge value={order.order_info.status} /></StatusCell>
@@ -240,7 +269,7 @@ export function DeliveryOrdersPage() {
                     />
                   </StatusCell>
                   <ActionsCell className="w-28">
-                    <Button variant="outline" size="sm" render={<Link to={`/delivery-orders/${order.order_info.order_number}`} />}>
+                    <Button variant="outline" size="sm" nativeButton={false} render={<Link to={`/delivery-orders/${order.order_info.order_number}`} />}>
                       Chi tiết
                     </Button>
                   </ActionsCell>
@@ -248,7 +277,7 @@ export function DeliveryOrdersPage() {
               ))}
               {filteredOrders.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
                     <div className="font-medium text-foreground">Không tìm thấy dữ liệu phù hợp.</div>
                     <div className="mt-1 text-sm">Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm.</div>
                   </TableCell>

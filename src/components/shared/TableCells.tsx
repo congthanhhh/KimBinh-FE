@@ -2,7 +2,7 @@ import type { ReactNode } from "react"
 
 import { TableCell } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
-import { displayValue } from "@/utils/formatters"
+import { displayValue, isEmptyDisplayValue } from "@/utils/formatters"
 
 type CellProps = {
   children: ReactNode
@@ -44,7 +44,7 @@ export function TruncatedCell({
 
   return (
     <TableCell className={cn("min-w-0", maxWidthClass, className)}>
-      <div className="truncate">
+      <div className={cn("truncate", isEmptyDisplayValue(value) && "text-gray-400")}>
         {renderedValue}
       </div>
     </TableCell>
@@ -82,7 +82,13 @@ export function CompositeCell({ lines, className }: CompositeCellProps) {
               className={cn("flex min-w-0 items-baseline gap-1 text-xs", line.emphasis && "text-sm")}
             >
               <span className="shrink-0 text-muted-foreground">{line.label}:</span>
-              <span className={cn("min-w-0 truncate", line.emphasis ? "font-medium text-foreground" : "text-muted-foreground")}>
+              <span
+                className={cn(
+                  "min-w-0 truncate",
+                  line.emphasis ? "font-medium text-foreground" : "text-muted-foreground",
+                  isEmptyDisplayValue(line.value) && "text-gray-400"
+                )}
+              >
                 {renderedValue}
               </span>
             </div>
@@ -100,7 +106,7 @@ export function CodeCell({ children, className }: CellProps) {
 
   return (
     <TableCell className={cn("w-32 max-w-36 font-medium whitespace-nowrap", className)}>
-      <div className="truncate">
+      <div className={cn("truncate", isEmptyDisplayValue(children) && "text-gray-400")}>
         {renderedChildren}
       </div>
     </TableCell>

@@ -1,4 +1,5 @@
 import { CalendarClock } from "lucide-react"
+import { Link } from "react-router-dom"
 
 import { PermissionActionButton } from "@/components/shared/PermissionActionButton"
 import { TaskStatusBadge } from "@/components/shared/TaskStatusBadge"
@@ -6,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useDemoStore } from "@/store/demoStore"
 import type { PersonnelRole, TaskListItem } from "@/types"
-import { formatDate, formatOptionalDate } from "@/utils/formatters"
+import { displayValue, formatDate, formatOptionalDate } from "@/utils/formatters"
 import { canUpdateTask, getTaskDisabledReason, personnelDemoRoles, personnelRoleLabels } from "@/utils/permissions"
 import { getTaskStatus } from "@/utils/task-status"
 
@@ -64,6 +65,9 @@ export function TaskList({ tasks }: TaskListProps) {
                         <span className="whitespace-nowrap">Vai trò: {task.role_label}</span>
                         <span className="max-w-[180px] truncate">Người phụ trách: {task.assignee}</span>
                         <span className="whitespace-nowrap">PO: {task.po_number}</span>
+                        <Link className="whitespace-nowrap text-primary underline-offset-4 hover:underline" to={`/delivery-orders/${task.order_number}`}>
+                          DO: {task.order_number}
+                        </Link>
                       </div>
                       <div className="mt-2 flex flex-wrap items-center gap-2">
                         <Badge variant={canUpdate ? "secondary" : "outline"}>
@@ -82,12 +86,22 @@ export function TaskList({ tasks }: TaskListProps) {
                       <span className="truncate">
                         Người tạo: <span className="font-medium text-foreground">{task.created_by}</span>
                       </span>
+                      <span className="truncate">
+                        Created by ID: <span className="font-medium text-foreground">{displayValue(task.created_by_user_id)}</span>
+                      </span>
+                      <span className="truncate">
+                        Assignee ID: <span className="font-medium text-foreground">{displayValue(task.assignee_user_id)}</span>
+                      </span>
+                      <span className="truncate">
+                        Assigned by ID: <span className="font-medium text-foreground">{displayValue(task.assigned_by_user_id)}</span>
+                      </span>
                       <span className="flex items-center gap-1">
                         <CalendarClock className="size-3.5" />
                         Ngày tạo: <span className="font-medium text-foreground">{formatDate(task.created_at)}</span>
                       </span>
                       <span>Ngày giao: <span className="font-medium text-foreground">{formatOptionalDate(task.assigned_at)}</span></span>
                       <span>Ngày hoàn thành: <span className="font-medium text-foreground">{task.completed_at ? formatDate(task.completed_at) : "Chưa hoàn thành"}</span></span>
+                      <span className="truncate">Ghi chú: <span className="font-medium text-foreground">{displayValue(task.notes)}</span></span>
                     </div>
                     <div className="flex flex-wrap gap-2 xl:justify-end">
                       {isCompleted ? (

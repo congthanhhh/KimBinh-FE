@@ -21,7 +21,17 @@ export function TasksPage() {
     () =>
       tasks.filter((task) => {
         const taskStatus = getTaskStatus(task.progress, task.completed_at)
-        const matchesQuery = [task.task_name, task.role_label, task.assignee, task.po_number, task.order_number]
+        const matchesQuery = [
+          task.task_name,
+          task.notes,
+          task.role_label,
+          task.assignee,
+          task.assignee_user_id,
+          task.assigned_by_user_id,
+          task.created_by_user_id,
+          task.po_number,
+          task.order_number,
+        ]
           .join(" ")
           .toLowerCase()
           .includes(query.toLowerCase())

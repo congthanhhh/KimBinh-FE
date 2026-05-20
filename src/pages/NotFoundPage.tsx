@@ -7,7 +7,7 @@ export function NotFoundPage() {
   return (
     <div className="space-y-4">
       <PageHeader title="Không tìm thấy trang" description="Trang bạn yêu cầu không tồn tại trong hệ thống." />
-      <Button render={<Link to="/dashboard" />}>Về tổng quan</Button>
+      <Button nativeButton={false} render={<Link to="/dashboard" />}>Về tổng quan</Button>
     </div>
   )
 }

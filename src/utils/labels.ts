@@ -3,13 +3,16 @@ import { EMPTY_VALUE } from "@/utils/formatters"
 const statusLabels: Record<string, string> = {
   NEW: "Mới",
   DRAFT: "Nháp",
+  CREATED: "Đã tạo",
   APPROVED: "Đã duyệt",
   PROCESSING: "Đang xử lý",
+  CONFIRMED: "Đã xác nhận",
   PO_CREATED: "Đã tạo PO",
   IN_TRANSIT: "Đang vận chuyển",
   CUSTOMS_PROCESSING: "Đang khai quan",
   WAREHOUSE_RECEIVED: "Đã nhập kho",
   COMPLETED: "Hoàn thành",
+  PARTIALLY_DELIVERED: "Giao một phần",
   DELAYED: "Trễ hạn",
   CANCELLED: "Đã hủy",
   NOT_STARTED: "Chưa bắt đầu",
@@ -35,6 +38,7 @@ const priorityLabels: Record<string, string> = {
 const routeLabels: Record<string, string> = {
   "/dashboard": "Tổng quan",
   "/purchase-requests": "Yêu cầu mua hàng",
+  "/purchase-orders": "Đơn mua hàng",
   "/delivery-orders": "Đơn nhập hàng",
   "/tasks": "Công việc",
 }

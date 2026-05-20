@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle2, ClipboardList, ListChecks, PackageCheck } from "lucide-react"
+import { ClipboardList, FileText, PackageCheck } from "lucide-react"
 import { Link } from "react-router-dom"
 
 import { HeaderTooltip } from "@/components/shared/HeaderTooltip"
@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useDemoStore } from "@/store/demoStore"
 import { fieldTooltips } from "@/utils/fieldTooltips"
 import { formatDate, formatOptionalDate } from "@/utils/formatters"
+import { getStatusLabel } from "@/utils/labels"
 import { getRoleActionDetails, roleFocus } from "@/utils/permissions"
 
 export function DashboardPage() {
@@ -20,7 +21,19 @@ export function DashboardPage() {
   const purchaseRequests = useDemoStore((state) => state.purchaseRequests)
   const deliveryOrders = useDemoStore((state) => state.deliveryOrders)
   const tasks = useDemoStore((state) => state.personnelTasks)
-  const approvedRequests = purchaseRequests.filter((request) => request.status === "APPROVED").length
+  const purchaseOrderDetailsById = useDemoStore((state) => state.purchaseOrderDetailsById)
+  const efmsDetailsByDeliveryOrderId = useDemoStore((state) => state.efmsDetailsByDeliveryOrderId)
+  const referenceUsers = useDemoStore((state) => state.referenceUsers)
+  const purchaseOrders = Object.values(purchaseOrderDetailsById)
+  const efmsDetails = Object.values(efmsDetailsByDeliveryOrderId)
+  const prStatusSummary = purchaseRequests.reduce<Record<string, number>>((summary, request) => {
+    summary[request.status] = (summary[request.status] ?? 0) + 1
+    return summary
+  }, {})
+  const doStatusSummary = deliveryOrders.reduce<Record<string, number>>((summary, order) => {
+    summary[order.order_info.status] = (summary[order.order_info.status] ?? 0) + 1
+    return summary
+  }, {})
   const activeDeliveries = deliveryOrders.filter(
     (order) => !["COMPLETED", "CANCELLED", "WAREHOUSE_RECEIVED"].includes(order.order_info.status)
   )
@@ -41,6 +54,41 @@ export function DashboardPage() {
   const pendingTasksPreview = pendingTasks.slice(0, 5)
   const receivedDeliveriesPreview = receivedDeliveries.slice(0, 5)
   const roleActionDetails = getRoleActionDetails(selectedRole)
+  const purchaseRequestStatusOrder = ["NEW", "APPROVED", "PROCESSING", "COMPLETED", "CANCELLED"] as const
+  const purchaseOrderStatusOrder = ["DRAFT", "CREATED", "CONFIRMED", "PARTIALLY_DELIVERED", "COMPLETED", "CANCELLED"] as const
+  const deliveryOrderStatusOrder = [
+    "DRAFT",
+    "PO_CREATED",
+    "IN_TRANSIT",
+    "CUSTOMS_PROCESSING",
+    "WAREHOUSE_RECEIVED",
+    "COMPLETED",
+    "DELAYED",
+  ] as const
+  const poStatusSummary = purchaseOrders.reduce<Record<string, number>>((summary, order) => {
+    summary[order.status] = (summary[order.status] ?? 0) + 1
+    return summary
+  }, {})
+  const supplierSummary = purchaseOrders.reduce<Record<string, number>>((summary, order) => {
+    const supplier = order.supplier_name || "—"
+    summary[supplier] = (summary[supplier] ?? 0) + 1
+    return summary
+  }, {})
+  const topSuppliers = Object.entries(supplierSummary).sort(([, first], [, second]) => second - first).slice(0, 3)
+  const efmsTotals = efmsDetails.reduce(
+    (summary, detail) => ({
+      houseBills: summary.houseBills + detail.house_bills.length,
+      containers: summary.containers + detail.containers.length,
+      charges: summary.charges + detail.charges.length,
+      accountingNotes: summary.accountingNotes + detail.accounting_notes.length,
+    }),
+    { houseBills: 0, containers: 0, charges: 0, accountingNotes: 0 }
+  )
+  const linkedUsersCount = purchaseRequests.filter(
+    (request) =>
+      referenceUsers.some((user) => user.id === request.requester_user_id) ||
+      referenceUsers.some((user) => user.id === request.purchasing_manager_user_id)
+  ).length
 
   return (
     <div className="space-y-4">
@@ -86,12 +134,100 @@ export function DashboardPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <MetricCard title="Tổng PR" value={String(purchaseRequests.length)} detail="Yêu cầu mua hàng" icon={ClipboardList} />
-        <MetricCard title="PR đã duyệt" value={String(approvedRequests)} detail="Sẵn sàng tạo DO" icon={CheckCircle2} />
-        <MetricCard title="DO đang chạy" value={String(activeDeliveries.length)} detail="Chưa nhập kho" icon={PackageCheck} />
-        <MetricCard title="DO trễ hạn" value={String(delayedDeliveries.length)} detail="Vượt kế hoạch kho" icon={AlertTriangle} />
-        <MetricCard title="Task tồn" value={String(pendingTasks.length)} detail="Chưa hoàn thành" icon={ListChecks} />
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <div className="text-xs font-medium uppercase text-muted-foreground">PR theo trạng thái</div>
+          <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-5">
+            {purchaseRequestStatusOrder.map((status) => (
+              <MetricCard
+                key={`pr-${status}`}
+                title={`PR ${getStatusLabel(status)}`}
+                value={String(prStatusSummary[status] ?? 0)}
+                detail="Yêu cầu mua hàng"
+                icon={ClipboardList}
+              />
+            ))}
+          </div>
+        </div>
+        <div className="space-y-2">
+          <div className="text-xs font-medium uppercase text-muted-foreground">PO theo trạng thái</div>
+          <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
+            {purchaseOrderStatusOrder.map((status) => (
+              <MetricCard
+                key={`po-${status}`}
+                title={`PO ${getStatusLabel(status)}`}
+                value={String(poStatusSummary[status] ?? 0)}
+                detail="Đơn mua hàng"
+                icon={FileText}
+              />
+            ))}
+          </div>
+        </div>
+        <div className="space-y-2">
+          <div className="text-xs font-medium uppercase text-muted-foreground">DO theo trạng thái</div>
+          <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-7">
+            {deliveryOrderStatusOrder.map((status) => (
+              <MetricCard
+                key={`do-${status}`}
+                title={`DO ${getStatusLabel(status)}`}
+                value={String(doStatusSummary[status] ?? 0)}
+                detail="Đơn nhập hàng"
+                icon={PackageCheck}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle>Purchase Orders</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">Tổng PO</span>
+              <span className="font-semibold">{purchaseOrders.length}</span>
+            </div>
+            {Object.entries(poStatusSummary).map(([status, count]) => (
+              <div key={status} className="flex items-center justify-between gap-3">
+                <StatusBadge value={status} />
+                <span className="font-medium">{count}</span>
+              </div>
+            ))}
+            {purchaseOrders.length === 0 && <div className="text-sm text-gray-400">—</div>}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Nhà cung cấp nổi bật</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {topSuppliers.map(([supplier, count]) => (
+              <div key={supplier} className="flex items-center justify-between gap-3 text-sm">
+                <span className={supplier === "—" ? "text-gray-400" : "truncate"}>{supplier}</span>
+                <span className="shrink-0 font-medium">{count} PO</span>
+              </div>
+            ))}
+            {topSuppliers.length === 0 && <div className="text-sm text-gray-400">—</div>}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>eFMS & người liên quan</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-2 text-sm">
+            <div><span className="text-muted-foreground">HBL</span><div className="font-semibold">{efmsTotals.houseBills}</div></div>
+            <div><span className="text-muted-foreground">Container</span><div className="font-semibold">{efmsTotals.containers}</div></div>
+            <div><span className="text-muted-foreground">Charge</span><div className="font-semibold">{efmsTotals.charges}</div></div>
+            <div><span className="text-muted-foreground">Note</span><div className="font-semibold">{efmsTotals.accountingNotes}</div></div>
+            <div className="col-span-2 text-xs text-muted-foreground">
+              {linkedUsersCount} PR đang resolve được requester/PIC theo app_users.
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
@@ -100,7 +236,7 @@ export function DashboardPage() {
             <CardTitle>Yêu cầu mua hàng cần chú ý</CardTitle>
           </CardHeader>
           <CardContent>
-            <Table className="min-w-[640px] table-fixed">
+            <Table className="min-w-160 table-fixed">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-28"><HeaderTooltip label="Mã PR" tooltip={fieldTooltips.requested_order_id} /></TableHead>
@@ -170,7 +306,7 @@ export function DashboardPage() {
             <CardTitle>Đơn nhập hàng trễ hạn</CardTitle>
           </CardHeader>
           <CardContent>
-            <Table className="min-w-[680px] table-fixed">
+            <Table className="min-w-170 table-fixed">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-32"><HeaderTooltip label="Số PO" tooltip={`${fieldTooltips.po_number}; ${fieldTooltips.requested_order_id}`} /></TableHead>
@@ -185,7 +321,7 @@ export function DashboardPage() {
                     <TwoLineCell
                       className="w-32"
                       primary={(
-                        <Button variant="link" render={<Link to={`/delivery-orders/${order.order_info.order_number}`} />}>
+                        <Button variant="link" nativeButton={false} render={<Link to={`/delivery-orders/${order.order_info.order_number}`} />}>
                           {order.sap_integration.po_number}
                         </Button>
                       )}
@@ -244,7 +380,7 @@ export function DashboardPage() {
             <CardTitle>Sắp tới hạn nhập kho</CardTitle>
           </CardHeader>
           <CardContent>
-            <Table className="min-w-[680px] table-fixed">
+            <Table className="min-w-170 table-fixed">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-32"><HeaderTooltip label="Số PO" tooltip={fieldTooltips.po_number} /></TableHead>
@@ -257,7 +393,7 @@ export function DashboardPage() {
                 {upcomingWarehouseItems.map((order) => (
                   <TableRow key={order.order_info.order_number}>
                     <CodeCell>
-                      <Button variant="link" render={<Link to={`/delivery-orders/${order.order_info.order_number}`} />}>
+                      <Button variant="link" nativeButton={false} render={<Link to={`/delivery-orders/${order.order_info.order_number}`} />}>
                         {order.sap_integration.po_number}
                       </Button>
                     </CodeCell>
@@ -288,7 +424,7 @@ export function DashboardPage() {
             <CardTitle>Hàng đã nhập kho</CardTitle>
           </CardHeader>
           <CardContent>
-            <Table className="min-w-[680px] table-fixed">
+            <Table className="min-w-170 table-fixed">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-32"><HeaderTooltip label="Số PO" tooltip={`${fieldTooltips.po_number}; ${fieldTooltips.requested_order_id}`} /></TableHead>
@@ -301,7 +437,7 @@ export function DashboardPage() {
                 {receivedDeliveriesPreview.map((order) => (
                   <TableRow key={order.order_info.order_number}>
                     <CodeCell>
-                      <Button variant="link" render={<Link to={`/delivery-orders/${order.order_info.order_number}`} />}>
+                      <Button variant="link" nativeButton={false} render={<Link to={`/delivery-orders/${order.order_info.order_number}`} />}>
                         {order.sap_integration.po_number}
                       </Button>
                     </CodeCell>
