@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
@@ -83,7 +82,7 @@ function MultiSelectDropdownBase({
         </DropdownMenuTrigger>
         <DropdownMenuContent className="max-h-80 min-w-80 p-2">
           <div className="flex items-center justify-between gap-2 px-1 pb-1">
-            <DropdownMenuLabel className="px-0">{label}</DropdownMenuLabel>
+            <div className="px-0 py-1 text-xs font-medium text-muted-foreground">{label}</div>
             {selectedOptions.length > 0 && (
               <Button type="button" variant="ghost" size="xs" onClick={() => onChange([])}>
                 <X className="size-3" />

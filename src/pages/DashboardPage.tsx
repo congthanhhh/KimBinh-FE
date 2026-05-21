@@ -2,7 +2,6 @@ import { ClipboardList, FileText, PackageCheck } from "lucide-react"
 import { Link } from "react-router-dom"
 
 import { HeaderTooltip } from "@/components/shared/HeaderTooltip"
-import { MetricCard } from "@/components/shared/MetricCard"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { CodeCell, DateCell, StatusCell, TwoLineCell } from "@/components/shared/TableCells"
@@ -90,6 +89,27 @@ export function DashboardPage() {
       referenceUsers.some((user) => user.id === request.purchasing_manager_user_id)
   ).length
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "COMPLETED":
+      case "APPROVED":
+      case "CONFIRMED":
+      case "WAREHOUSE_RECEIVED":
+        return "text-green-500"
+      case "DELAYED":
+      case "CANCELLED":
+        return "text-red-500"
+      case "PROCESSING":
+      case "IN_TRANSIT":
+      case "PARTIALLY_DELIVERED":
+        return "text-blue-500"
+      case "CUSTOMS_PROCESSING":
+        return "text-amber-500"
+      default:
+        return "text-muted-foreground"
+    }
+  }
+
   return (
     <div className="space-y-4">
       <PageHeader
@@ -137,43 +157,58 @@ export function DashboardPage() {
       <div className="space-y-4">
         <div className="space-y-2">
           <div className="text-xs font-medium uppercase text-muted-foreground">PR theo trạng thái</div>
-          <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-5">
+          <div className="flex flex-wrap overflow-hidden rounded-lg border bg-card shadow-sm">
             {purchaseRequestStatusOrder.map((status) => (
-              <MetricCard
+              <div
                 key={`pr-${status}`}
-                title={`PR ${getStatusLabel(status)}`}
-                value={String(prStatusSummary[status] ?? 0)}
-                detail="Yêu cầu mua hàng"
-                icon={ClipboardList}
-              />
+                className={`flex min-w-36 flex-1 items-center justify-between gap-3 border-b border-r px-4 py-3 last:border-r-0 sm:min-w-40 xl:border-b-0 ${(prStatusSummary[status] ?? 0) === 0 ? "opacity-45" : ""}`}
+              >
+                <div className="flex min-w-0 items-center gap-2">
+                  <ClipboardList className={`size-4 shrink-0 ${getStatusColor(status)}`} />
+                  <span className="truncate text-xs font-medium uppercase text-muted-foreground">{getStatusLabel(status)}</span>
+                </div>
+                <div className="min-w-10 shrink-0 text-right text-2xl font-bold leading-none tabular-nums text-foreground">
+                  {String(prStatusSummary[status] ?? 0)}
+                </div>
+              </div>
             ))}
           </div>
         </div>
         <div className="space-y-2">
           <div className="text-xs font-medium uppercase text-muted-foreground">PO theo trạng thái</div>
-          <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
+          <div className="flex flex-wrap overflow-hidden rounded-lg border bg-card shadow-sm">
             {purchaseOrderStatusOrder.map((status) => (
-              <MetricCard
+              <div
                 key={`po-${status}`}
-                title={`PO ${getStatusLabel(status)}`}
-                value={String(poStatusSummary[status] ?? 0)}
-                detail="Đơn mua hàng"
-                icon={FileText}
-              />
+                className={`flex min-w-36 flex-1 items-center justify-between gap-3 border-b border-r px-4 py-3 last:border-r-0 sm:min-w-40 2xl:border-b-0 ${(poStatusSummary[status] ?? 0) === 0 ? "opacity-45" : ""}`}
+              >
+                <div className="flex min-w-0 items-center gap-2">
+                  <FileText className={`size-4 shrink-0 ${getStatusColor(status)}`} />
+                  <span className="truncate text-xs font-medium uppercase text-muted-foreground">{getStatusLabel(status)}</span>
+                </div>
+                <div className="min-w-10 shrink-0 text-right text-2xl font-bold leading-none tabular-nums text-foreground">
+                  {String(poStatusSummary[status] ?? 0)}
+                </div>
+              </div>
             ))}
           </div>
         </div>
         <div className="space-y-2">
           <div className="text-xs font-medium uppercase text-muted-foreground">DO theo trạng thái</div>
-          <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-7">
+          <div className="flex flex-wrap overflow-hidden rounded-lg border bg-card shadow-sm">
             {deliveryOrderStatusOrder.map((status) => (
-              <MetricCard
+              <div
                 key={`do-${status}`}
-                title={`DO ${getStatusLabel(status)}`}
-                value={String(doStatusSummary[status] ?? 0)}
-                detail="Đơn nhập hàng"
-                icon={PackageCheck}
-              />
+                className={`flex min-w-36 flex-1 items-center justify-between gap-3 border-b border-r px-4 py-3 last:border-r-0 sm:min-w-40 2xl:border-b-0 ${(doStatusSummary[status] ?? 0) === 0 ? "opacity-45" : ""}`}
+              >
+                <div className="flex min-w-0 items-center gap-2">
+                  <PackageCheck className={`size-4 shrink-0 ${getStatusColor(status)}`} />
+                  <span className="truncate text-xs font-medium uppercase text-muted-foreground">{getStatusLabel(status)}</span>
+                </div>
+                <div className="min-w-10 shrink-0 text-right text-2xl font-bold leading-none tabular-nums text-foreground">
+                  {String(doStatusSummary[status] ?? 0)}
+                </div>
+              </div>
             ))}
           </div>
         </div>
@@ -192,7 +227,7 @@ export function DashboardPage() {
             {Object.entries(poStatusSummary).map(([status, count]) => (
               <div key={status} className="flex items-center justify-between gap-3">
                 <StatusBadge value={status} />
-                <span className="font-medium">{count}</span>
+                <span className="font-semibold">{count}</span>
               </div>
             ))}
             {purchaseOrders.length === 0 && <div className="text-sm text-gray-400">—</div>}
@@ -206,8 +241,8 @@ export function DashboardPage() {
           <CardContent className="space-y-2">
             {topSuppliers.map(([supplier, count]) => (
               <div key={supplier} className="flex items-center justify-between gap-3 text-sm">
-                <span className={supplier === "—" ? "text-gray-400" : "truncate"}>{supplier}</span>
-                <span className="shrink-0 font-medium">{count} PO</span>
+                <span className={supplier === "—" ? "text-gray-400" : "truncate font-medium text-foreground"}>{supplier}</span>
+                <span className="shrink-0 font-bold">{count} PO</span>
               </div>
             ))}
             {topSuppliers.length === 0 && <div className="text-sm text-gray-400">—</div>}
@@ -218,12 +253,12 @@ export function DashboardPage() {
           <CardHeader>
             <CardTitle>eFMS & người liên quan</CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-2 text-sm">
-            <div><span className="text-muted-foreground">HBL</span><div className="font-semibold">{efmsTotals.houseBills}</div></div>
-            <div><span className="text-muted-foreground">Container</span><div className="font-semibold">{efmsTotals.containers}</div></div>
-            <div><span className="text-muted-foreground">Charge</span><div className="font-semibold">{efmsTotals.charges}</div></div>
-            <div><span className="text-muted-foreground">Note</span><div className="font-semibold">{efmsTotals.accountingNotes}</div></div>
-            <div className="col-span-2 text-xs text-muted-foreground">
+          <CardContent className="grid grid-cols-2 gap-4 text-sm">
+            <div><span className="text-xs uppercase text-muted-foreground">HBL</span><div className="text-lg font-bold">{efmsTotals.houseBills}</div></div>
+            <div><span className="text-xs uppercase text-muted-foreground">Container</span><div className="text-lg font-bold">{efmsTotals.containers}</div></div>
+            <div><span className="text-xs uppercase text-muted-foreground">Charge</span><div className="text-lg font-bold">{efmsTotals.charges}</div></div>
+            <div><span className="text-xs uppercase text-muted-foreground">Note</span><div className="text-lg font-bold">{efmsTotals.accountingNotes}</div></div>
+            <div className="col-span-2 mt-2 border-t pt-2 text-xs text-muted-foreground">
               {linkedUsersCount} PR đang resolve được requester/PIC theo app_users.
             </div>
           </CardContent>
